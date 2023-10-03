@@ -64,31 +64,8 @@ openssl req -x509 -sha256 -days 356 -nodes -newkey rsa:2048 -subj "/CN=${DOMAIN_
 openssl genrsa -out ${DOMAIN_NAME}.key 2048
 
 # Generate csf conf
-cat > csr.conf << EOF
-[ req ]
-default_bits = 2048
-prompt = no
-default_md = sha256
-req_extensions = req_ext
-distinguished_name = dn
-
-[ dn ]
-C = UA
-ST = Kiev Oblast'
-L = Kiev
-O = ??
-OU = ??
-CN = ${DOMAIN_NAME}
-
-[ req_ext ]
-subjectAltName = @alt_names
-
-[ alt_names ]
-DNS.1 = ${DOMAIN_NAME}
-DNS.2 = www.${DOMAIN_NAME}
-IP.1 = 127.0.0.1
-IP.2 = 127.0.0.1
-EOF
+python3 -c "from jinja2 import Template; template = Template(open('csr_template.j2').read()); print(template.render(DOMAIN_NAME='${DOMAIN_NAME}'))" > csr.conf
+cat csr.conf
 
 # Generate CSR request using private key
 openssl req -new -key ${DOMAIN_NAME}.key -out ${DOMAIN_NAME}.csr -config csr.conf
