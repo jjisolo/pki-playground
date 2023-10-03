@@ -65,7 +65,6 @@ openssl genrsa -out ${DOMAIN_NAME}.key 2048
 
 # Generate csf conf
 python3 -c "from jinja2 import Template; template = Template(open('csr_template.j2').read()); print(template.render(DOMAIN_NAME='${DOMAIN_NAME}'))" > csr.conf
-cat csr.conf
 
 # Generate CSR request using private key
 openssl req -new -key ${DOMAIN_NAME}.key -out ${DOMAIN_NAME}.csr -config csr.conf
