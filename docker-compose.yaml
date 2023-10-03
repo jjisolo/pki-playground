@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+ jenkins:
+   image: "jenkins/jenkins:latest"
+   user: root
+   privileged: true
+   volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins_home:/var/jenkins_home
+      - ./keys/jenkins.jks:/var/jenkins_home/jenkins.jks
+   networks:
+     - jenkins-network
+   ports:
+     - 443:8443
+     - 50000:50000
+   environment:
+     JENKINS_OPTS: --httpPort=-1 --httpsPort=8443 --httpsKeyStore=/var/jenkins_home/jenkins.jks --httpsKeyStorePassword=testtest
+networks:
+  jenkins-network:
+    driver: bridge
+  
