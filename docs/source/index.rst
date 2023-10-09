@@ -13,7 +13,7 @@ To use `pki-playground.py`, you can run it from the command line as follows.
 
 First of all you need to unlock the repository, to get access to the generated files:
 
-.. code-block:: shell
+.. code-block::
 
         sudo apt-get update && apt-get install git-crypt
         sudo python3 pki-playground.py --unlock KEY
@@ -23,7 +23,7 @@ unlock the pkis/ directory.
 
 After this, you need to initialize the PKI toolchain by entering the following command:
 
-.. code-block:: shell
+.. code-block::
 
         sudo python3 pki-playground.py --pki-init PKI_NAME 
 
@@ -32,7 +32,7 @@ This will initialize the root CA/CN with the provided PKI_NAME.
 To create the server certificates, you need to explicitly specify the root
 certificates(PKI) name as follows:
 
-.. code-block:: shell
+.. code-block:: 
 
         sudo python3 pki-playground.py --create-server-cert PKI_NAME DOMAIN_NAME 
    
@@ -42,7 +42,7 @@ After that, you need to create the so-called deployment, which is a docker-compo
 the text, that will be temoparily added to the /etc/hosts file.
 To do this, type as follows:
 
-.. code-block:: shell
+.. code-block:: 
 
         sudo python3 pki-playground.py --create-deployment DEPLOYMENT_NAME HTTPS_PORT PKI_NAME DOMAIN_NAME 
 
@@ -51,7 +51,7 @@ and create docker-compose.yaml and the host_additions files.
 
 To execute the deployment proceed with the following commands:
 
-.. code-block:: shell
+.. code-block::
 
         sudo python3 pki-playground.py --start-deployment DEPLOYMENT_NAME
 
