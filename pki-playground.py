@@ -26,6 +26,7 @@ def executed_as_root() -> bool:
 
     :returns True when running as root, False when not
     """
+
     return os.geteuid() == 0
 
 
@@ -36,9 +37,10 @@ def _check_files(files: typing.List[str]) -> None:
     :param: files: files to check
     :returns: None:
     """
+
     for file_path in files:
         if not os.path.isfile(file_path):
-            print("Error: missing file {file_path}!")
+            print(f"Error: missing file {file_path}!")
             exit(1)
 
 
@@ -101,11 +103,11 @@ def _generate_root_certs(pki_name: str) -> None:
     """
 
     # Create the root CA/CN directory
-    WORKING_DIRECTORY = "./{}".format(os.path.join(PKI_DIR, pki_name))
-    print(f"Generating root certificates at {WORKING_DIRECTORY}")
+    working_directory = f"./{os.path.join(PKI_DIR, pki_name)}"
+    print(f"Generating root certificates at {working_directory}")
 
-    if not os.path.exists(WORKING_DIRECTORY):
-        os.mkdir(WORKING_DIRECTORY)
+    if not os.path.exists(working_directory):
+        os.mkdir(working_directory)
 
     # Generate root privatekey and certificate
     openssl_root_command = [
@@ -121,13 +123,13 @@ def _generate_root_certs(pki_name: str) -> None:
         "-subj",
         f"/CN={pki_name}.com/C=UA/L=Kiev",
         "-keyout",
-        f"{pki_name}.com.key",
+        f"{pki_name}.key",
         "-out",
-        f"{pki_name}.com.crt",
+        f"{pki_name}.crt",
     ]
     subprocess.run(
         openssl_root_command,
-        cwd=WORKING_DIRECTORY,
+        cwd=working_directory,
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT)
@@ -137,12 +139,12 @@ def _generate_root_certs(pki_name: str) -> None:
         "openssl",
         "genrsa",
         "-out",
-        f"private.{pki_name}.com.key",
+        f"private.{pki_name}.key",
         "2048",
     ]
     subprocess.run(
         openssl_genrsa_command,
-        cwd=WORKING_DIRECTORY,
+        cwd=working_directory,
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT)
@@ -150,7 +152,7 @@ def _generate_root_certs(pki_name: str) -> None:
     # Generate csf conf using Jinja2 template
     template = jinja2.Template(open(f'{PKI_DIR}/csr_template.j2').read())
 
-    with open(f"{WORKING_DIRECTORY}/csr.conf", "w") as file:
+    with open(f"{working_directory}/csr.conf", "w") as file:
         file.write(template.render(PKI_NAME=pki_name))
 
     # Generate CSR request using private key
@@ -159,21 +161,21 @@ def _generate_root_certs(pki_name: str) -> None:
         "req",
         "-new",
         "-key",
-        f"private.{pki_name}.com.key",
+        f"private.{pki_name}.key",
         "-out",
-        f"{pki_name}.com.csr",
+        f"{pki_name}.csr",
         "-config",
         "csr.conf",
     ]
     subprocess.run(
         openssl_gencsr_command,
-        cwd=WORKING_DIRECTORY,
+        cwd=working_directory,
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT)
 
     # Log the successfull ending of the subroutine
-    print(f"Done generating root certificates at {WORKING_DIRECTORY}")
+    print(f"Done generating root certificates at {working_directory}")
 
 
 def _generate_server_certs(pki_name: str, server_domain: str) -> None:
@@ -195,11 +197,10 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
 
     # Assert that root CA/CN do exist
     required_filenames = [
-        f"./pkis/{pki_name}/private.{pki_name}.com.key",
-        f"./pkis/{pki_name}/{pki_name}.com.crt",
-        f"./pkis/{pki_name}/{pki_name}.com.csr",
-        f"./pkis/{pki_name}/{pki_name}.com.key",
-        f"./pkis/{pki_name}/{pki_name}.com.srl",
+        f"./pkis/{pki_name}/private.{pki_name}.key",
+        f"./pkis/{pki_name}/{pki_name}.crt",
+        f"./pkis/{pki_name}/{pki_name}.csr",
+        f"./pkis/{pki_name}/{pki_name}.key",
     ]
     _check_files(required_filenames)
 
@@ -207,30 +208,23 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
     server_directory = os.path.join(pki_directory, "servers")
     if not os.path.exists(server_directory):
         os.mkdir(server_directory)
-    else:
-        print(f"Error: {server_directory} is already in use")
 
     domain_directory = os.path.join(server_directory, server_domain)
     if not os.path.exists(domain_directory):
         os.mkdir(domain_directory)
-    else:
         print(f"Error: {domain_directory} is already in use")
 
-    WORKING_DIRECTORY = f"./{domain_directory}"
-    print(f"Generating server certificates at {WORKING_DIRECTORY}")
+    working_directory = f"./{domain_directory}"
+    print(f"Generating server certificates at {working_directory}")
 
     # Generate the cert.conf file
-    cert_conf_data = f"""authorityKeyIdentifier=keyid,issuer
-    basicConstraints=CA:FALSE
-    keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-    subjectAltName = @alt_names
-
-    [alt_names]
-    DNS.1 = {server_domain}
-    """
+    cert_template = jinja2.Template(
+        open(f'./pkis/cert_template.j2').read())
 
     with open(f"{domain_directory}/cert.conf", "w") as cert_conf:
-        cert_conf.write(cert_conf_data)
+        cert_conf.write(
+            cert_template.render(
+                SERVER_DOMAIN=server_domain))
 
     # Create SSL with self signed CA
     openssl_create_ssl = [
@@ -238,11 +232,11 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
         "x509",
         "-req",
         "-in",
-        f"../../{pki_name}.com.csr",
+        f"../../{pki_name}.csr",
         "-CA",
-        f"../../{pki_name}.com.crt",
+        f"../../{pki_name}.crt",
         "-CAkey",
-        f"../../{pki_name}.com.key",
+        f"../../{pki_name}.key",
         "-CAcreateserial",
         "-out",
         f"{server_domain}.crt",
@@ -254,7 +248,7 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
     ]
     subprocess.run(
         openssl_create_ssl,
-        cwd=WORKING_DIRECTORY,
+        cwd=working_directory,
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT)
@@ -272,17 +266,17 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
         "-passout",
         f"pass:{keystore_password}",
         "-inkey",
-        f"../../{pki_name}.com.key",
+        f"../../{pki_name}.key",
         "-in",
-        f"../../{pki_name}.com.crt",
+        f"../../{pki_name}.crt",
         "-certfile",
-        f"../../{pki_name}.com.crt",
+        f"../../{pki_name}.crt",
         "-name",
         f"{server_domain}",
     ]
     subprocess.run(
         openssl_create_pkcs12_keystore,
-        cwd=WORKING_DIRECTORY,
+        cwd=working_directory,
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT)
@@ -299,13 +293,13 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
         '-deststorepass', keystore_password,
         '-destalias', server_domain
     ]
-    subprocess.run(openssl_convert_to_jks, cwd=WORKING_DIRECTORY, check=True)
+    subprocess.run(openssl_convert_to_jks, cwd=working_directory, check=True)
 
     # Clean up and move the keystore to the 'keys' folder
-    subprocess.run(['rm', 'keystore.pkcs12'], cwd=WORKING_DIRECTORY)
+    subprocess.run(['rm', 'keystore.pkcs12'], cwd=working_directory)
 
     # Log the successfull ending of the subroutine
-    print(f"Done generating server certificates at {WORKING_DIRECTORY}")
+    print(f"Done generating server certificates at {working_directory}")
 
 
 def _generate_deployment(
@@ -364,20 +358,20 @@ def _start_deployment(deployment_name: str) -> None:
 
     print(f"Starting the deployment {deployment_name}")
 
-    WORKING_DIR = os.path.join(DEP_DIR, deployment_name)
-    if not os.path.exists(WORKING_DIR):
+    working_dir = os.path.join(DEP_DIR, deployment_name)
+    if not os.path.exists(working_dir):
         print("Provided deployment does not exists")
 
     required_filenames = [
-        f"{WORKING_DIR}/docker-compose.yaml",
-        f"{WORKING_DIR}/host_additions",
+        f"{working_dir}/docker-compose.yaml",
+        f"{working_dir}/host_additions",
     ]
     _check_files(required_filenames)
 
     # Add the deployment entry to the /etc/hosts
     hosts_entry = "#(fj)"
 
-    with open(f"{WORKING_DIR}/host_additions", "r") as host_additions:
+    with open(f"{working_dir}/host_additions", "r") as host_additions:
         hosts_entry = host_additions.read()
 
     with open("/etc/hosts", "a") as hosts:
@@ -386,7 +380,7 @@ def _start_deployment(deployment_name: str) -> None:
     # Launch the compose routine
     # On end, delete the deployment entry from the /etc/hosts file
     try:
-        subprocess.run(["docker-compose", "up"], cwd=WORKING_DIR)
+        subprocess.run(["docker-compose", "up"], cwd=working_dir)
     except KeyboardInterrupt as e:
         with open("/etc/hosts", "r") as hosts, open("/etc/hosts.tmp", "w") as temp_hosts:
             for line in hosts:
@@ -485,3 +479,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
