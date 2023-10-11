@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
+
+"""
+    This module provides an interface above the OpenSSL library,
+    to generate the self-signed root and server CA/CN.
+"""
+
 import os
 import sys
 import subprocess
 import argparse
-import jinja2
 import typing
-import shutil
+import jinja2
 
 # Contants
 PKI_DIR = "pkis"
@@ -13,11 +18,27 @@ DEP_DIR = "deployments"
 KEYSTORE_PASSWORD = None
 
 # Arguments docstrings
-ARG_PKI_INIT_HELP_MESSAGE = "initialize the PKI with the specified name"
-ARG_SRV_CRT_HELP_MESSAGE = "initalize the server certificates with the specified pki_name and domain_name"
-ARG_CRT_DEP_HELP_MESSAGE = "create the deployment configuration using the keystore password, https port, pki_name and domain_name"
-ARG_STR_DEP_HELP_MESSAGE = "start the deployment: initialize the compose routine and update /etc/hosts entry"
-ARG_REP_ULK_HELP_MESSAGE = "decrypt the AES-256 key and unlock this repository using the git-crypt utility"
+ARG_PKI_INIT_HELP_MESSAGE = """
+initialize the PKI with the specified name
+"""
+
+ARG_SRV_CRT_HELP_MESSAGE  = """
+initalize the server certificates with the 
+specified pki_name and domain_name
+"""
+
+ARG_CRT_DEP_HELP_MESSAGE  = """
+create the deployment configuration using
+the keystore password, https port, pki_name
+and domain_name"""
+
+ARG_STR_DEP_HELP_MESSAGE  = """
+start the deployment: initialize the compose
+routine and update /etc/hosts entry"""
+
+ARG_REP_ULK_HELP_MESSAGE  = """
+decrypt the AES-256 key and unlock this 
+repository using the git-crypt utility"""
 
 
 def executed_as_root() -> bool:
@@ -41,7 +62,7 @@ def _check_files(files: typing.List[str]) -> None:
     for file_path in files:
         if not os.path.isfile(file_path):
             print(f"Error: missing file {file_path}!")
-            exit(1)
+            sys.exit(1)
 
 
 def _parser_register_arguments(parser: argparse.ArgumentParser) -> None:
@@ -150,9 +171,11 @@ def _generate_root_certs(pki_name: str) -> None:
         stderr=subprocess.STDOUT)
 
     # Generate csf conf using Jinja2 template
-    template = jinja2.Template(open(f'{PKI_DIR}/csr_template.j2').read())
+    template = None
+    with open(f'{PKI_DIR}/csr_template.j2', "r", encoding="utf8") as jfile:
+        template = jinja2.Template(jfile.read())
 
-    with open(f"{working_directory}/csr.conf", "w") as file:
+    with open(f"{working_directory}/csr.conf", "w", encoding="utf8") as file:
         file.write(template.render(PKI_NAME=pki_name))
 
     # Generate CSR request using private key
@@ -193,7 +216,7 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
     if not os.path.exists(pki_directory):
         print(
             f"Error: PKI directory with the name of {pki_name} does not exist")
-        exit(1)
+        sys.exit(1)
 
     # Assert that root CA/CN do exist
     required_filenames = [
@@ -218,10 +241,11 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
     print(f"Generating server certificates at {working_directory}")
 
     # Generate the cert.conf file
-    cert_template = jinja2.Template(
-        open(f'./pkis/cert_template.j2').read())
+    cert_template = None
+    with open('./pkis/cert_template.j2', encoding="utf8") as jfile:
+        cert_template = jinja2.Template(jfile.read())
 
-    with open(f"{domain_directory}/cert.conf", "w") as cert_conf:
+    with open(f"{domain_directory}/cert.conf", "w", encoding="utf8") as cert_conf:
         cert_conf.write(
             cert_template.render(
                 SERVER_DOMAIN=server_domain))
@@ -244,7 +268,7 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
         "365",
         "-sha256",
         "-extfile",
-        f"cert.conf",
+        "cert.conf",
     ]
     subprocess.run(
         openssl_create_ssl,
@@ -296,7 +320,7 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
     subprocess.run(openssl_convert_to_jks, cwd=working_directory, check=True)
 
     # Clean up and move the keystore to the 'keys' folder
-    subprocess.run(['rm', 'keystore.pkcs12'], cwd=working_directory)
+    subprocess.run(['rm', 'keystore.pkcs12'], cwd=working_directory, check=True)
 
     # Log the successfull ending of the subroutine
     print(f"Done generating server certificates at {working_directory}")
@@ -319,20 +343,21 @@ def _generate_deployment(
 
     print(f"Generating the deployment {deployment_name}")
 
-    DEPLOYMENT_PATH = os.path.join(DEP_DIR, deployment_name)
-    print(f"Generating the new deployment at {DEPLOYMENT_PATH}")
+    deployment_path = os.path.join(DEP_DIR, deployment_name)
+    print(f"Generating the new deployment at {deployment_path}")
 
-    if not os.path.exists(DEPLOYMENT_PATH):
-        os.mkdir(DEPLOYMENT_PATH)
+    if not os.path.exists(deployment_path):
+        os.mkdir(deployment_path)
 
     # Request the keystore password
     keystore_password = input("Enter the keystore password: ")
 
     # Generate the docker-compose file using Jinja2 template
-    compose_template = jinja2.Template(
-        open(f'{DEP_DIR}/docker-compose-template.j2').read())
+    compose_template = None
+    with open(f'{DEP_DIR}/docker-compose-template.j2', encoding="utf8") as jfile:
+        compose_template = jinja2.Template(jfile.read())
 
-    with open(f"{DEP_DIR}/{deployment_name}/docker-compose.yaml", "w") as file:
+    with open(f"{DEP_DIR}/{deployment_name}/docker-compose.yaml", "w", encoding="utf8") as file:
         file.write(
             compose_template.render(
                 HTTPS_PORT_BIND=https_port,
@@ -342,7 +367,7 @@ def _generate_deployment(
 
     # Generate the host_additions file, that is an appendix to the /etc/host
     # file
-    with open(f"{DEP_DIR}/{deployment_name}/host_additions", "w") as file:
+    with open(f"{DEP_DIR}/{deployment_name}/host_additions", "w", encoding="utf8") as file:
         file.write(f"127.0.0.1    {domain_name}")
 
     print(f"Done generating the deployment {deployment_name}")
@@ -371,22 +396,23 @@ def _start_deployment(deployment_name: str) -> None:
     # Add the deployment entry to the /etc/hosts
     hosts_entry = "#(fj)"
 
-    with open(f"{working_dir}/host_additions", "r") as host_additions:
+    with open(f"{working_dir}/host_additions", "r", encoding="utf8") as host_additions:
         hosts_entry = host_additions.read()
 
-    with open("/etc/hosts", "a") as hosts:
+    with open("/etc/hosts", "a", encoding="utf8") as hosts:
         hosts.write(f"\n{hosts_entry}")
 
     # Launch the compose routine
     # On end, delete the deployment entry from the /etc/hosts file
     try:
-        subprocess.run(["docker-compose", "up"], cwd=working_dir)
-    except KeyboardInterrupt as e:
-        with open("/etc/hosts", "r") as hosts, open("/etc/hosts.tmp", "w") as temp_hosts:
-            for line in hosts:
-                if hosts_entry not in line:
-                    temp_hosts.write(line)
-        subprocess.run(["mv", "/etc/hosts.tmp", "/etc/hosts"])
+        subprocess.run(["docker-compose", "up"], cwd=working_dir, check=True)
+    except KeyboardInterrupt:
+        with open("/etc/hosts", "r", encoding="utf8") as hosts:
+            with open("/etc/hosts.tmp", "w", encoding="utf8") as temp_hosts:
+                for line in hosts:
+                    if hosts_entry not in line:
+                        temp_hosts.write(line)
+        subprocess.run(["mv", "/etc/hosts.tmp", "/etc/hosts"], check=True)
 
     print(f"Done starting the deployment {deployment_name}")
 
@@ -414,8 +440,8 @@ def _git_crypt_unlock(key: str) -> None:
         f"pass:{key}",
         "-pbkdf2"
     ]
-    subprocess.run(openssl_decrypt_aes256)
-    subprocess.run(["git-crypt", "unlock", "./git-crypt-key"])
+    subprocess.run(openssl_decrypt_aes256, check=True)
+    subprocess.run(["git-crypt", "unlock", "./git-crypt-key"], check=True)
 
 
 def _handle_cli_arguments(args: typing.Any) -> None:
@@ -472,7 +498,7 @@ def main() -> None:
 
     if not executed_as_root():
         print("This script must be running as root.")
-        exit(1)
+        sys.exit(1)
 
     handle_cli_arguments()
 

@@ -1,3 +1,5 @@
+![pylint](https://NAMESPACE.gitlab.io/pyling.svg)
+
 # PKI-Playground README.md
 
 ## Introduction
@@ -7,7 +9,11 @@ The script is named `pki-playground.py`, and this documentation explains its usa
 ## Usage
 To use `pki-playground.py`, you can run it from the command line as follows.
 
-First of all you need to unlock the repository, to get access to the generated files:
+### Unlocking the repository
+The ./pkis directory in this repository is locked by default via git-crypt.
+The key for the git-crypt is by default encrypted with AES-256 algorithm.
+
+To get access this repository type as follows:
 ```shell
 sudo apt-get update && apt-get install git-crypt
 sudo python3 pki-playground.py --unlock KEY
@@ -16,12 +22,15 @@ sudo python3 pki-playground.py --unlock KEY
 This command will decrypt the shipped with this repository git-crypt key and
 unlock the pkis/ directory.
 
+### Initialing the PKI
 After this, you need to initialize the PKI toolchain by entering the following command:
 ```shell
 sudo python3 pki-playground.py --pki-init PKI_NAME 
 ```
 This will initialize the root CA/CN with the provided name.
 
+
+### Creating the server certificates(based on created PKI)
 To create the server certificates, you need to explicitly specify the root
 certificates(PKI) name as follows:
 ```shell
@@ -29,6 +38,8 @@ sudo python3 pki-playground.py --create-server-cert PKI_NAME DOMAIN_NAME
 ```
 This will create the server certificates that are based on the PKI with the provided name.
 
+
+### Managing deployments
 After that, you need to create the so-called deployment, which is a docker-compose file and
 the text, that will be temoparily added to the /etc/hosts file.
 To do this, type as follows:

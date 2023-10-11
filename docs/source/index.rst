@@ -1,6 +1,17 @@
 PKI-Playground Documentation
 ==============================
 
+.. toctree::
+        :maxdepth: 2
+        :caption: Contents:
+        
+        pki-playground
+
+.. automodule:: pki-playground
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
 Introduction
 ------------
 
