@@ -34,12 +34,14 @@ jobs:
       - name: Pylint Check
         uses: Silleellie/pylint-github-action@v1
         with:
-          package-path: ./pki-playground.py
+          package-path: ./pki_playground.py
           python-version: 3.11
           requirements-path: requirements.txt
           readme-path: README.md
       - name: Install sphinx
         run: sudo apt-get install -y python3-sphinx 
+      - name: Install m2r
+        run: sudo apt-get install -y python3-m2r
       - name: Compile page
         run: cd docs/ && make html && cd ..
       - name: Setup Pages
