@@ -97,7 +97,7 @@ def _parser_register_arguments(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument(
         "--start-deployment",
-        metavar=("pki_name"),
+        metavar=("deployment_name"),
         type=str,
         help=ARG_STR_DEP_HELP_MESSAGE,
     )
@@ -129,6 +129,9 @@ def _generate_root_certs(pki_name: str) -> None:
 
     if not os.path.exists(working_directory):
         os.mkdir(working_directory)
+    else:
+        print(f"Error: PKI with the name {pki_name} already exists")
+        sys.exit(1)
 
     # Generate root privatekey and certificate
     openssl_root_command = [
@@ -261,6 +264,8 @@ def _generate_server_certs(pki_name: str, server_domain: str) -> None:
         f"../../{pki_name}.crt",
         "-CAkey",
         f"../../{pki_name}.key",
+        "-subj", 
+        f"/C=UA/ST=Kiev Oblast/L=?/O=A? Corp/OU=IT Dept/CN={server_domain}",
         "-CAcreateserial",
         "-out",
         f"{server_domain}.crt",
@@ -440,8 +445,13 @@ def _git_crypt_unlock(key: str) -> None:
         f"pass:{key}",
         "-pbkdf2"
     ]
-    subprocess.run(openssl_decrypt_aes256, check=True)
-    subprocess.run(["git-crypt", "unlock", "./git-crypt-key"], check=True)
+    
+    try:
+        subprocess.run(openssl_decrypt_aes256, check=True)
+        subprocess.run(["git-crypt", "unlock", "./git-crypt-key"], check=False)
+    except subprocess.CalledProcessError:
+        subprocess.run(["rm", "git-crypt-key"], check=False)
+        print("Error: Unlocking failed")
 
 
 def _handle_cli_arguments(args: typing.Any) -> None:
@@ -451,7 +461,7 @@ def _handle_cli_arguments(args: typing.Any) -> None:
     :param args: args object that is produces by the argpare's parser
     :returns: None
     """
-
+    
     if args.pki_init:
         _generate_root_certs(args.pki_init)
 
@@ -472,7 +482,7 @@ def _handle_cli_arguments(args: typing.Any) -> None:
 
     if args.unlock:
         _git_crypt_unlock(args.unlock)
-
+    
 
 def handle_cli_arguments() -> None:
     """
@@ -487,6 +497,10 @@ def handle_cli_arguments() -> None:
 
     args = parser.parse_args()
     _handle_cli_arguments(args)
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
 
 
 def main() -> None:
@@ -505,4 +519,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

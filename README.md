@@ -1,4 +1,4 @@
-![pylint](https://img.shields.io/badge/pylint-9.86-yellow?logo=python&logoColor=white)
+![pylint](https://img.shields.io/badge/pylint-9.93-yellow?logo=python&logoColor=white)
 
 # PKI-Playground README.md
 
@@ -21,6 +21,18 @@ sudo python3 pki_playground.py --unlock KEY
 
 This command will decrypt the shipped with this repository git-crypt key and
 unlock the pkis/ directory.
+
+## Setting up the docker environment
+If you don't want to install the required packages on your host machine,
+there's an option to build the docker environment:
+
+```shell
+$ docker build . -t sirin_pki_playground
+$ ./docker-emit.sh
+```
+
+Will launch the interactive session in the docker container, and mount
+the root of this repository.
 
 ### Initialing the PKI
 After this, you need to initialize the PKI toolchain by entering the following command:
