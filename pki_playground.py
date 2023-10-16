@@ -445,7 +445,7 @@ def _git_crypt_unlock(key: str) -> None:
         f"pass:{key}",
         "-pbkdf2"
     ]
-    
+
     try:
         subprocess.run(openssl_decrypt_aes256, check=True)
         subprocess.run(["git-crypt", "unlock", "./git-crypt-key"], check=False)
@@ -461,7 +461,7 @@ def _handle_cli_arguments(args: typing.Any) -> None:
     :param args: args object that is produces by the argpare's parser
     :returns: None
     """
-    
+
     if args.pki_init:
         _generate_root_certs(args.pki_init)
 
@@ -482,7 +482,7 @@ def _handle_cli_arguments(args: typing.Any) -> None:
 
     if args.unlock:
         _git_crypt_unlock(args.unlock)
-    
+
 
 def handle_cli_arguments() -> None:
     """
