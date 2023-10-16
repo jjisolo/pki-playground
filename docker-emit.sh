@@ -6,5 +6,7 @@ if ! docker image inspect "$DOCKER_IMAGE" &> /dev/null; then
 	docker build . -t $DOCKER_IMAGE
 fi
 
-docker run -it -v "$(pwd)":/pki_playground "$DOCKER_IMAGE" /bin/sh
+docker run -it -v \
+       	"$(pwd)":/pki_playground -v /etc/hosts:/etc/hosts \
+	-v /var/run/docker.sock:/var/run/docker.sock "$DOCKER_IMAGE" /bin/sh
 
